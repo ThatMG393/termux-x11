@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply from: 'wayland-scanner.gradle'
 
 def waylandOut = project.buildDir.absolutePath + "/wayland"
+def waylandSource = project.buildDir.absolutePath + "/wayland-src"
 
 android {
     compileSdkVersion 32
@@ -68,10 +69,19 @@ android {
 }
 
 task patchWayland {
-    println("Patch can fail here, it is normal if a patch was already applied")
-    ant.patch(patchfile: "${project.projectDir}/src/main/jni/wayland.patch", dir: "${project.projectDir}/src/main/jni/wayland/src", failonerror:false)
-    ant.patch(patchfile: "${project.projectDir}/src/main/jni/wayland2.patch", dir: "${project.projectDir}/src/main/jni/wayland", failonerror:false)
+	def waylandRepo = Grgit.clone(dir: '${waylandSource}', uri: 'https://gitlab.freedesktop.org/wayland/wayland.git')
+
+    println("Patching 'wayland'")
+    waylandRepo.apply(patch: "${project.projectDir}/src/main/jni/wayland.patch")
+    waylandRepo.apply(patch: "${project.projectDir}/src/main/jni/wayland2.patch")
 }
+
+/*
+task shellExec(type: Exec) {
+    workingDir "${waylandSource}"
+    commandLine 'bash', '-c', ""
+}
+*/
 
 tasks.matching { it.name.toLowerCase().contains("ndk") && !it.name.toLowerCase().contains("clean") }
         .all { it.dependsOn(patchWayland) }
